@@ -42,24 +42,21 @@ def display_json_editor(json_data):
 def render_lottie_html(json_data):
     base64_json = json_to_base64(json_data)
     html_code = f'''
-    <html>
-    <body>
-        <div id="lottie-animation" style="width:100%; height:400px;"></div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
-        <script>
-            var animationData = atob("{base64_json}");
-            var animation = lottie.loadAnimation({{
-                container: document.getElementById('lottie-animation'),
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                animationData: JSON.parse(animationData)
-            }});
-        </script>
-    </body>
-    </html>
+    <div id="lottie-animation" style="width:100%; height:400px;"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.7.6/lottie.min.js"></script>
+    <script>
+        const animationData = JSON.parse(atob("{base64_json}"));
+        const animation = lottie.loadAnimation({{
+            container: document.getElementById('lottie-animation'),
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            animationData: animationData
+        }});
+    </script>
     '''
-    st.components.v1.html(html_code, height=450)
+    # Use Streamlit to load the HTML
+    st.components.v1.html(html_code, height=450, scrolling=True)
 
 # Main Streamlit app function
 def main():
