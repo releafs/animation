@@ -1,17 +1,12 @@
 import json
 import streamlit as st
-import base64
+from streamlit_lottie import st_lottie
 
 # Load JSON from tree.json
 @st.cache(allow_output_mutation=True)
 def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
-
-# Function to convert JSON to a base64 string for embedding
-def json_to_base64(json_data):
-    json_str = json.dumps(json_data)
-    return base64.b64encode(json_str.encode()).decode()
 
 # Display JSON parameters for editing
 def display_json_editor(json_data):
@@ -22,7 +17,7 @@ def display_json_editor(json_data):
     for index, layer in enumerate(updated_json.get("layers", [])):
         if "tree" in layer.get("nm", ""):
             st.sidebar.subheader(f"Tree {index + 1}")
-            
+
             # Edit position (x, y)
             position = layer["ks"]["p"]["k"]
             new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
@@ -38,25 +33,9 @@ def display_json_editor(json_data):
 
     return updated_json
 
-# Function to render Lottie animation as an HTML component
-def render_lottie_html(json_data):
-    base64_json = json_to_base64(json_data)
-    html_code = f'''
-    <div id="lottie-animation" style="width:100%; height:400px;"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.7.6/lottie.min.js"></script>
-    <script>
-        const animationData = JSON.parse(atob("{base64_json}"));
-        const animation = lottie.loadAnimation({{
-            container: document.getElementById('lottie-animation'),
-            renderer: 'svg',
-            loop: true,
-            autoplay: true,
-            animationData: animationData
-        }});
-    </script>
-    '''
-    # Use Streamlit to load the HTML
-    st.components.v1.html(html_code, height=450, scrolling=True)
+# Function to render Lottie animation using st_lottie
+def render_lottie_animation(json_data):
+    st_lottie(json_data, height=450, key="modified_animation")
 
 # Main Streamlit app function
 def main():
@@ -64,7 +43,7 @@ def main():
 
     # Load JSON data from tree.json
     json_data = load_json()
-    
+
     # Display editable parameters in sidebar and apply changes
     modified_json = display_json_editor(json_data)
 
@@ -72,9 +51,9 @@ def main():
     st.subheader("Modified JSON Structure")
     st.json(modified_json)
 
-    # Render animation using HTML and Lottie Web Player
+    # Render animation using st_lottie
     st.subheader("Live Animation Preview")
-    render_lottie_html(modified_json)
+    render_lottie_animation(modified_json)
 
 # Run the Streamlit app
 if __name__ == "__main__":
