@@ -1,5 +1,4 @@
-streamlit
-streamlit-lottie
-streamlit-bokeh-events
-ipywidgets
-bokeh
+dash
+dash-html-components
+dash-core-components
+dash-dangerously-set-inner-html
