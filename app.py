@@ -78,18 +78,36 @@ def display_json_editor(json_data):
 
 # Plot the position map of trees
 def plot_tree_positions(positions, labels):
+    """
+    Plot the position map of trees with proper scaling and labeling.
+    """
     fig, ax = plt.subplots(figsize=(10, 8))
-    for idx, (pos, label) in enumerate(zip(positions, labels)):
-        ax.scatter(pos[0], pos[1], label=f"{label}", alpha=0.8, edgecolors='k', s=100)
-        ax.text(pos[0] + 10, pos[1] + 10, f"{label}", fontsize=8)
-    
-    ax.set_xlim(0, 1600)
-    ax.set_ylim(0, 1200)
+
+    # Extract x and y positions
+    x_positions = [pos[0] for pos in positions]
+    y_positions = [pos[1] for pos in positions]
+
+    # Set dynamic axis limits
+    x_min, x_max = min(x_positions) - 50, max(x_positions) + 50
+    y_min, y_max = min(y_positions) - 50, max(y_positions) + 50
+
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+
+    # Plot each tree position
+    for idx, (x, y, label) in enumerate(zip(x_positions, y_positions, labels)):
+        ax.scatter(x, y, label=f"{label}", alpha=0.8, edgecolors='k', s=100, zorder=3)
+        ax.text(x + 10, y + 10, f"{label}", fontsize=8, zorder=4)
+
+    # Set plot title and labels
     ax.set_title("Tree Position Map", fontsize=16)
     ax.set_xlabel("X Position")
     ax.set_ylabel("Y Position")
     ax.grid(True)
-    plt.gca().invert_yaxis()  # Match animation's coordinate system (Y-axis inverted)
+
+    # Invert y-axis to match animation's coordinate system
+    plt.gca().invert_yaxis()
+
     return fig
 
 # Main Streamlit app function
