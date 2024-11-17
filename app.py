@@ -14,21 +14,21 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Filter shapes in the JSON to only include allowed shapes
-def filter_shapes(json_data):
+# Filter tree shapes in the JSON based on ALLOWED_SHAPES
+def filter_tree_shapes(json_data):
     """
-    Modify the JSON to include only allowed shapes (based on ALLOWED_SHAPES).
+    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES.
     """
-    filtered_json = json_data.copy()
-    for layer in filtered_json.get("layers", []):
-        # Check if the layer contains shapes
-        if "shapes" in layer:
-            # Keep only shapes whose indices are in ALLOWED_SHAPES
+    filtered_data = json_data.copy()
+    
+    for layer in filtered_data.get("layers", []):
+        # Check if the layer is named "tree" or contains tree objects
+        if "tree" in layer.get("nm", "").lower() and "shapes" in layer:
+            # Keep only the allowed shapes
             layer["shapes"] = [
-                shape for i, shape in enumerate(layer["shapes"])
-                if (i + 1) in ALLOWED_SHAPES  # 1-based index
+                shape for i, shape in enumerate(layer["shapes"]) if (i + 1) in ALLOWED_SHAPES
             ]
-    return filtered_json
+    return filtered_data
 
 # Count the number of trees and collect their labels
 def count_trees_with_labels(json_data):
@@ -109,9 +109,9 @@ def main():
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Filter the JSON data to include only allowed shapes
-    filtered_json = filter_shapes(json_data)
-
+    # Filter tree shapes to include only allowed shapes
+    filtered_json = filter_tree_shapes(json_data)
+    
     # Display editable parameters in sidebar and apply changes
     modified_json = display_json_editor(filtered_json)
 
