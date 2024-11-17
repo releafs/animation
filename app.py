@@ -5,8 +5,13 @@ from streamlit_lottie import st_lottie
 # Configure Streamlit page
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
-# Allowed shape indices
+# Allowed shape indices (default)
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
+
+# Default values for "Rows of trees"
+DEFAULT_POSITION_X = 1160
+DEFAULT_POSITION_Y = 710
+DEFAULT_SCALE = 400
 
 # Load the JSON file (tree.json) with st.cache_data
 @st.cache_data
@@ -84,6 +89,11 @@ def display_json_editor(json_data):
     for index, layer in enumerate(updated_json.get("layers", [])):
         if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
             st.sidebar.subheader(f"Edit {layer['nm']}")
+
+            # Set default values for "Rows of trees"
+            if "rows of trees" in layer.get("nm", "").lower():
+                layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, layer["ks"]["p"]["k"][2]]
+                layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]
 
             # Edit position (x, y)
             position = layer["ks"]["p"]["k"]
