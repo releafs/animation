@@ -5,90 +5,86 @@ from streamlit_lottie import st_lottie
 # Configure Streamlit page
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
-
-@st.cache_data
+# Load the JSON file (tree.json)
+@st.cache(allow_output_mutation=True)
 def load_json():
-    """
-    Load the JSON file (tree.json).
-    """
     with open("tree.json", "r") as f:
         return json.load(f)
 
-
-def calculate_grid_positions(rows, cols, x_start=400, y_start=400, x_gap=400, y_gap=400):
+# Count the number of trees and collect their labels
+def count_trees_with_labels(json_data):
     """
-    Calculate grid positions for a given number of rows and columns.
+    Count the number of tree objects in the animation JSON and collect their labels.
+    Returns a count and a list of labels.
     """
-    positions = []
-    for row in range(rows):
-        for col in range(cols):
-            x = x_start + col * x_gap
-            y = y_start + row * y_gap
-            positions.append([x, y, 0])  # Append 3D position (x, y, z)
-    return positions
+    tree_count = 0
+    tree_labels = []
+    
+    for layer in json_data.get("layers", []):
+        # Check if the layer is named "tree" or contains tree objects
+        if "tree" in layer.get("nm", "").lower():
+            # If the layer has shapes, count the individual shapes and use layer name as a prefix
+            if "shapes" in layer:
+                shape_count = len(layer["shapes"])
+                tree_count += shape_count
+                for i in range(shape_count):
+                    tree_labels.append(f"{layer['nm']} - Shape {i+1}")
+            else:
+                tree_count += 1
+                tree_labels.append(layer["nm"])
 
+    return tree_count, tree_labels
 
-def arrange_trees_in_grid(json_data, grid_rows=3, grid_cols=3):
-    """
-    Filter and arrange tree layers into a grid layout.
-    """
-    updated_json = json_data.copy()
+# Display parameters and allow editing in Streamlit sidebar
+def display_json_editor(json_data):
+    updated_json = json_data.copy()  # Create a copy to store modifications
+    st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Identify tree layers
-    tree_layers = [
-        layer for layer in updated_json.get("layers", [])
-        if "tree" in layer.get("nm", "").lower()
-    ]
+    # Get the number of trees and their labels
+    tree_count, tree_labels = count_trees_with_labels(json_data)
+    st.sidebar.info(f"Number of Trees: {tree_count}")
 
-    # Calculate grid positions for the specified rows and columns
-    grid_positions = calculate_grid_positions(grid_rows, grid_cols)
+    # Display tree labels
+    st.sidebar.subheader("Tree Labels")
+    for label in tree_labels:
+        st.sidebar.text(f"- {label}")
 
-    # Select the required number of trees (grid_rows * grid_cols)
-    num_required_trees = grid_rows * grid_cols
-    selected_trees = tree_layers[:num_required_trees]
+    # Loop through each "tree" in the JSON "layers"
+    for index, layer in enumerate(updated_json.get("layers", [])):
+        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
+            st.sidebar.subheader(f"Edit {layer['nm']}")
 
-    # Update positions of selected trees
-    for idx, tree in enumerate(selected_trees):
-        tree["ks"]["p"]["k"] = grid_positions[idx]
+            # Edit position (x, y)
+            position = layer["ks"]["p"]["k"]
+            new_x = st.sidebar.slider(f"{layer['nm']} Position X", 0, 1600, int(position[0]), step=10)
+            new_y = st.sidebar.slider(f"{layer['nm']} Position Y", 0, 1200, int(position[1]), step=10)
+            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
 
-    # Replace the original layers with updated tree layers and keep other layers
-    updated_json["layers"] = selected_trees + [
-        layer for layer in updated_json.get("layers", [])
-        if "tree" not in layer.get("nm", "").lower()
-    ]
+            # Edit scale
+            scale = layer["ks"]["s"]["k"]
+            new_scale = st.sidebar.slider(f"{layer['nm']} Scale", 50, 300, int(scale[0]), step=10)
+            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+
+            # Update the layer in the JSON data
+            updated_json["layers"][index] = layer
 
     return updated_json
 
-
-def count_trees(json_data):
-    """
-    Count the number of tree objects in the animation JSON.
-    """
-    return sum(1 for layer in json_data.get("layers", []) if "tree" in layer.get("nm", "").lower())
-
-
+# Main Streamlit app function
 def main():
     st.title("Interactive Tree Animation Editor")
     st.markdown("Use the sidebar to adjust the tree animation parameters.")
 
-    # Load JSON data
+    # Load JSON data from tree.json
     json_data = load_json()
+    
+    # Display editable parameters in sidebar and apply changes
+    modified_json = display_json_editor(json_data)
 
-    # Sidebar options
-    st.sidebar.header("Settings")
-    rows = st.sidebar.slider("Number of Rows", 1, 5, 3)
-    cols = st.sidebar.slider("Number of Columns", 1, 5, 3)
-
-    # Update JSON to arrange trees in a grid
-    modified_json = arrange_trees_in_grid(json_data, grid_rows=rows, grid_cols=cols)
-
-    # Display number of trees
-    st.sidebar.info(f"Number of Trees: {rows * cols}")
-
-    # Render the modified animation
+    # Render the modified JSON animation
     st.subheader("Live Animation Preview")
     st_lottie(modified_json, key="tree_animation")
 
-
+# Run the Streamlit app
 if __name__ == "__main__":
     main()
