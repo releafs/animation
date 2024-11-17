@@ -2,6 +2,9 @@ import json
 import streamlit as st
 from streamlit_lottie import st_lottie
 
+# Configure Streamlit page
+st.set_page_config(page_title="Tree Animation Editor", layout="wide")
+
 # Load the JSON file (tree.json)
 @st.cache(allow_output_mutation=True)
 def load_json():
@@ -37,16 +40,13 @@ def display_json_editor(json_data):
 # Main Streamlit app function
 def main():
     st.title("Interactive Tree Animation Editor")
+    st.markdown("Use the sidebar to adjust the tree animation parameters.")
 
     # Load JSON data from tree.json
     json_data = load_json()
     
     # Display editable parameters in sidebar and apply changes
     modified_json = display_json_editor(json_data)
-
-    # Display the JSON structure for reference
-    st.subheader("Modified JSON Structure")
-    st.json(modified_json)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
