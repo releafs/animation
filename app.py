@@ -93,7 +93,8 @@ def display_json_editor(json_data):
 
             # Edit scale
             scale = layer["ks"]["s"]["k"]
-            new_scale = st.sidebar.slider(f"{layer['nm']} Scale", 50, 300, int(scale[0]), step=10)
+            max_scale = 1000 if "rows of trees" in layer.get("nm", "").lower() else 300
+            new_scale = st.sidebar.slider(f"{layer['nm']} Scale", 50, max_scale, int(scale[0]), step=10)
             layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
 
             # Update the layer in the JSON data
