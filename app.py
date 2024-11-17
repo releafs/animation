@@ -42,16 +42,22 @@ def apply_offsets(json_data, num_duplicates, offsets):
 # Main Streamlit app function
 def main():
     st.title("Duplicate and Offset Tree Animation")
-    st.markdown("Use the sidebar to control the number of duplicates and their offsets.")
+    st.markdown("Use the sidebar to control the number of duplicates and their offsets using input boxes.")
 
     # Load JSON data from modified_tree_animation.json
     json_data = load_json()
 
     # Sidebar controls
     st.sidebar.header("Duplication Settings")
-    num_duplicates = st.sidebar.slider("Number of Duplicates", min_value=0, max_value=10, value=2, step=1)
-    offset_x = st.sidebar.slider("Offset X (pixels)", min_value=-500, max_value=500, value=100, step=10)
-    offset_y = st.sidebar.slider("Offset Y (pixels)", min_value=-500, max_value=500, value=100, step=10)
+    num_duplicates = st.sidebar.number_input(
+        "Number of Duplicates", min_value=0, max_value=10, value=2, step=1
+    )
+    offset_x = st.sidebar.number_input(
+        "Offset X (pixels)", min_value=-500, max_value=500, value=100, step=10
+    )
+    offset_y = st.sidebar.number_input(
+        "Offset Y (pixels)", min_value=-500, max_value=500, value=100, step=10
+    )
 
     # Prepare offsets dictionary
     offsets = {"x": offset_x, "y": offset_y}
