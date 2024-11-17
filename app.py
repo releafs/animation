@@ -11,6 +11,7 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
+# Count the number of trees in the animation
 def count_trees(json_data):
     """
     Count the number of tree objects in the animation JSON.
