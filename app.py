@@ -27,27 +27,34 @@ def count_trees(json_data):
     return tree_count
 
 # Add a new tree layer
-def add_tree(json_data):
+def add_tree(json_data, initial_tree_count):
     """
     Add a new tree by duplicating an existing tree layer.
     """
+    # Find the first tree layer to duplicate
     for layer in json_data["layers"]:
         if "tree" in layer.get("nm", "").lower():
             new_tree = copy.deepcopy(layer)  # Duplicate the first tree layer
-            new_tree["nm"] = f"tree_{len(json_data['layers']) + 1}"  # Rename the layer
-            json_data["layers"].append(new_tree)  # Add it to the layers
+            new_tree["nm"] = f"tree_{initial_tree_count + 1}"  # Rename based on count
+            new_tree["ks"]["p"]["k"] = [new_tree["ks"]["p"]["k"][0] + 50,  # Offset X
+                                        new_tree["ks"]["p"]["k"][1] + 50,  # Offset Y
+                                        new_tree["ks"]["p"]["k"][2]]  # Keep Z unchanged
+            json_data["layers"].append(new_tree)  # Add the new tree to the layers
             break
     return json_data
 
 # Remove the last tree layer
-def remove_tree(json_data):
+def remove_tree(json_data, initial_tree_count):
     """
     Remove the last tree layer.
     """
-    for i in range(len(json_data["layers"]) - 1, -1, -1):  # Iterate layers in reverse
+    # Iterate layers in reverse order to find the last tree layer
+    for i in range(len(json_data["layers"]) - 1, -1, -1):
         if "tree" in json_data["layers"][i].get("nm", "").lower():
-            del json_data["layers"][i]  # Delete the last tree layer
-            break
+            current_tree_count = count_trees(json_data)
+            if current_tree_count > initial_tree_count:  # Only remove if above baseline
+                del json_data["layers"][i]
+                break
     return json_data
 
 # Display parameters and allow editing in Streamlit sidebar
@@ -62,10 +69,10 @@ def display_json_editor(json_data, initial_tree_count):
     # Add and Remove buttons
     col1, col2 = st.sidebar.columns(2)
     if col1.button("Add Tree"):
-        updated_json = add_tree(updated_json)
+        updated_json = add_tree(updated_json, tree_count)
     if col2.button("Remove Tree"):
-        if tree_count > initial_tree_count:  # Only remove if additional trees exist
-            updated_json = remove_tree(updated_json)
+        if tree_count > initial_tree_count:  # Only remove if above baseline
+            updated_json = remove_tree(updated_json, initial_tree_count)
 
     # Add collective controls for all trees
     st.sidebar.subheader("All Trees Settings")
