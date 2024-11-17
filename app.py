@@ -85,6 +85,7 @@ def display_json_editor(json_data):
 
     # Edit position and scale for visible trees
     st.sidebar.subheader("Tree Parameters")
+    current_layer_index = 0  # Keep track of the layer index
     for index, (label, pos, vis) in enumerate(zip(tree_labels, tree_positions, visibility)):
         if vis:  # Only display sliders for visible trees
             st.sidebar.subheader(f"Edit {label}")
@@ -92,12 +93,18 @@ def display_json_editor(json_data):
             # Edit position (x, y)
             new_x = st.sidebar.slider(f"{label} Position X", 0, 1600, int(pos[0]), step=10)
             new_y = st.sidebar.slider(f"{label} Position Y", 0, 1200, int(pos[1]), step=10)
-            updated_json["layers"][index]["ks"]["p"]["k"] = [new_x, new_y, pos[2]]
+
+            # Update the correct layer in the JSON
+            updated_layer = updated_json["layers"][current_layer_index]
+            updated_layer["ks"]["p"]["k"] = [new_x, new_y, pos[2]]
 
             # Edit scale
-            scale = updated_json["layers"][index]["ks"]["s"]["k"]
+            scale = updated_layer["ks"]["s"]["k"]
             new_scale = st.sidebar.slider(f"{label} Scale", 50, 300, int(scale[0]), step=10)
-            updated_json["layers"][index]["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+            updated_layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+
+        # Increment the layer index
+        current_layer_index += 1
 
     return updated_json
 
