@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Editor", layout="wide")
+st.set_page_config(page_title="Tree Animation Preview", layout="wide")
 
 # Allowed shape indices
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
@@ -12,6 +12,7 @@ ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
 DEFAULT_POSITION_X = 1160
 DEFAULT_POSITION_Y = 710
 DEFAULT_SCALE = 400
+DUPLICATE_OFFSET_X = 600  # Offset for duplicated animation
 
 # Load the JSON file (tree.json) with st.cache_data
 @st.cache_data
@@ -20,14 +21,15 @@ def load_json():
         return json.load(f)
 
 # Filter tree shapes in the JSON based on ALLOWED_SHAPES and set default values
-def prepare_json(json_data):
+def prepare_json_with_duplicate(json_data):
     """
-    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES
-    and applies default position and scale for the "rows of trees" layer.
+    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES,
+    applies default position and scale for the "rows of trees" layer, and duplicates the animation.
     """
-    filtered_data = json_data.copy()
-    
-    for layer in filtered_data.get("layers", []):
+    prepared_data = json_data.copy()
+    duplicate_layers = []
+
+    for layer in prepared_data.get("layers", []):
         # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
             # If the layer has shapes, filter only allowed shapes
@@ -39,18 +41,31 @@ def prepare_json(json_data):
             if "rows of trees" in layer.get("nm", "").lower():
                 layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, 0]  # Position
                 layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]  # Scale
-    return filtered_data
+
+                # Create a duplicate of the layer with an offset
+                duplicate_layer = layer.copy()
+                duplicate_layer["nm"] = f"{layer['nm']} - Copy"
+                duplicate_layer["ks"]["p"]["k"] = [
+                    DEFAULT_POSITION_X + DUPLICATE_OFFSET_X,
+                    DEFAULT_POSITION_Y,
+                    0,
+                ]
+                duplicate_layers.append(duplicate_layer)
+
+    # Add the duplicated layers to the JSON
+    prepared_data["layers"].extend(duplicate_layers)
+    return prepared_data
 
 # Main Streamlit app function
 def main():
-    st.title("Tree Animation Preview")
-    st.markdown("This animation uses the default parameters for the tree shapes and 'rows of trees'.")
+    st.title("Duplicated Tree Animation")
+    st.markdown("This animation shows two tree animations side by side.")
 
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Prepare the JSON by filtering tree shapes and setting default values
-    prepared_json = prepare_json(json_data)
+    # Prepare the JSON with the duplicated animation
+    prepared_json = prepare_json_with_duplicate(json_data)
 
     # Render the prepared JSON animation
     st.subheader("Live Animation Preview")
