@@ -77,9 +77,9 @@ def display_json_editor(json_data):
     return updated_json, tree_positions
 
 # Plot the position map of trees
-def plot_tree_positions(positions, labels):
+def plot_tree_positions(positions, labels, x_range, y_range):
     """
-    Plot the position map of trees with proper scaling and labeling.
+    Plot the position map of trees with proper scaling and labeling, allowing dynamic axis range.
     """
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -87,9 +87,9 @@ def plot_tree_positions(positions, labels):
     x_positions = [pos[0] for pos in positions]
     y_positions = [pos[1] for pos in positions]
 
-    # Set dynamic axis limits
-    x_min, x_max = min(x_positions) - 50, max(x_positions) + 50
-    y_min, y_max = min(y_positions) - 50, max(y_positions) + 50
+    # Apply user-defined axis limits
+    x_min, x_max = x_range
+    y_min, y_max = y_range
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
@@ -121,6 +121,13 @@ def main():
     # Display editable parameters in sidebar and apply changes
     modified_json, tree_positions = display_json_editor(json_data)
 
+    # Allow user to input custom ranges for X and Y positions
+    st.sidebar.header("Map Settings")
+    x_min = st.sidebar.number_input("X Position Minimum", value=0, step=10)
+    x_max = st.sidebar.number_input("X Position Maximum", value=1600, step=10)
+    y_min = st.sidebar.number_input("Y Position Minimum", value=0, step=10)
+    y_max = st.sidebar.number_input("Y Position Maximum", value=1200, step=10)
+
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
     st_lottie(modified_json, key="tree_animation")
@@ -128,7 +135,7 @@ def main():
     # Plot the tree positions on a map
     st.subheader("Tree Position Map")
     _, tree_labels, _ = count_trees_with_positions(json_data)
-    tree_map = plot_tree_positions(tree_positions, tree_labels)
+    tree_map = plot_tree_positions(tree_positions, tree_labels, (x_min, x_max), (y_min, y_max))
     st.pyplot(tree_map)
 
 # Run the Streamlit app
