@@ -45,13 +45,13 @@ def apply_offsets(json_data, num_duplicates, original_offsets, duplicate_offsets
 
     return modified_data
 
-# Render Lottie with zoom functionality using HTML
-def render_lottie_with_zoom(lottie_data, zoom_level):
+# Render Lottie with zoom functionality and adjustable display size using HTML
+def render_lottie_with_zoom(lottie_data, zoom_level, display_height):
     """
-    Embed Lottie animation in HTML with adjustable zoom using CSS transforms.
+    Embed Lottie animation in HTML with adjustable zoom using CSS transforms and adjustable display size.
     """
     html_content = f"""
-    <div style="display: flex; justify-content: center; align-items: center; height: 500px; overflow: hidden;">
+    <div style="display: flex; justify-content: center; align-items: center; height: {display_height}px; overflow: hidden;">
         <div style="transform: scale({zoom_level}); transform-origin: center;">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
             <div id="lottie-animation"></div>
@@ -72,8 +72,8 @@ def render_lottie_with_zoom(lottie_data, zoom_level):
 
 # Main Streamlit app function
 def main():
-    st.title("Duplicate and Offset Tree Animation with Zoom")
-    st.markdown("Use the sidebar to control offsets for the original animation and duplicates, and zoom in/out the animation stage.")
+    st.title("Duplicate and Offset Tree Animation with Adjustable Display")
+    st.markdown("Use the sidebar to control offsets for the original animation and duplicates, zoom, and adjust the display size.")
 
     # Load JSON data from modified_tree_animation.json
     json_data = load_json()
@@ -103,6 +103,12 @@ def main():
     st.sidebar.header("Zoom Settings")
     zoom_level = st.sidebar.slider("Zoom Level", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
 
+    # Sidebar control for display height
+    st.sidebar.header("Display Settings")
+    display_height = st.sidebar.number_input(
+        "Display Height (pixels)", min_value=400, max_value=2000, value=600, step=50
+    )
+
     # Prepare offsets dictionaries
     original_offsets = {"x": original_offset_x, "y": original_offset_y}
     duplicate_offsets = {"x": duplicate_offset_x, "y": duplicate_offset_y}
@@ -110,10 +116,10 @@ def main():
     # Apply offsets to original animation and duplicates
     modified_json = apply_offsets(json_data, num_duplicates, original_offsets, duplicate_offsets)
 
-    # Render the modified JSON animation with zoom
+    # Render the modified JSON animation with zoom and adjustable display size
     st.subheader("Live Animation Preview")
-    zoom_html = render_lottie_with_zoom(modified_json, zoom_level)
-    st.components.v1.html(zoom_html, height=600)
+    zoom_html = render_lottie_with_zoom(modified_json, zoom_level, display_height)
+    st.components.v1.html(zoom_html, height=display_height + 100)
 
 # Run the Streamlit app
 if __name__ == "__main__":
