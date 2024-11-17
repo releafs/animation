@@ -4,7 +4,7 @@ from streamlit_lottie import st_lottie
 import copy
 
 # Configure Streamlit page
-st.set_page_config(page_title="Duplicate, Offset, and Scale Tree Animation", layout="wide")
+st.set_page_config(page_title="Duplicate and Offset Tree Animation", layout="wide")
 
 # Load the JSON file (modified_tree_animation.json) with st.cache_data
 @st.cache_data
@@ -15,12 +15,12 @@ def load_json():
     with open("modified_tree_animation.json", "r") as f:
         return json.load(f)
 
-# Duplicate, apply offsets, and scale
-def apply_transformations(json_data, num_duplicates, offsets, scale):
+# Duplicate and apply offsets
+def apply_offsets(json_data, num_duplicates, offsets):
     """
-    Create duplicates of the animation with specified offsets and scaling.
+    Create duplicates of the animation with specified offsets.
     """
-    transformed_data = copy.deepcopy(json_data)
+    duplicated_data = copy.deepcopy(json_data)
 
     # Duplicate the layers for each copy
     for i in range(1, num_duplicates + 1):
@@ -28,32 +28,52 @@ def apply_transformations(json_data, num_duplicates, offsets, scale):
             # Create a duplicate of the layer
             duplicated_layer = copy.deepcopy(layer)
             duplicated_layer["nm"] = f"{layer['nm']} - Copy {i}"  # Update the name for the duplicate
-
+            
             # Apply offsets to position
             if "ks" in duplicated_layer and "p" in duplicated_layer["ks"]:
                 duplicated_layer["ks"]["p"]["k"][0] += offsets["x"] * i  # Offset X
                 duplicated_layer["ks"]["p"]["k"][1] += offsets["y"] * i  # Offset Y
-
-            # Apply scaling to the layer
-            if "ks" in duplicated_layer and "s" in duplicated_layer["ks"]:
-                duplicated_layer["ks"]["s"]["k"][0] = int(duplicated_layer["ks"]["s"]["k"][0] * scale)  # Scale X
-                duplicated_layer["ks"]["s"]["k"][1] = int(duplicated_layer["ks"]["s"]["k"][1] * scale)  # Scale Y
-
+            
             # Add the duplicated layer to the layers
-            transformed_data["layers"].append(duplicated_layer)
+            duplicated_data["layers"].append(duplicated_layer)
 
-    return transformed_data
+    return duplicated_data
+
+# Render Lottie with zoom functionality using HTML
+def render_lottie_with_zoom(lottie_data, zoom_level):
+    """
+    Embed Lottie animation in HTML with adjustable zoom using CSS transforms.
+    """
+    html_content = f"""
+    <div style="display: flex; justify-content: center; align-items: center; height: 500px; overflow: hidden;">
+        <div style="transform: scale({zoom_level}); transform-origin: center;">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
+            <div id="lottie-animation"></div>
+            <script>
+                var animationData = {json.dumps(lottie_data)};
+                var anim = lottie.loadAnimation({{
+                    container: document.getElementById('lottie-animation'),
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    animationData: animationData
+                }});
+            </script>
+        </div>
+    </div>
+    """
+    return html_content
 
 # Main Streamlit app function
 def main():
-    st.title("Duplicate, Offset, and Scale Tree Animation")
-    st.markdown("Use the sidebar to control the number of duplicates, offsets, and scaling.")
+    st.title("Duplicate and Offset Tree Animation with Zoom")
+    st.markdown("Use the sidebar to control duplication and offsets, and zoom in/out the animation stage.")
 
     # Load JSON data from modified_tree_animation.json
     json_data = load_json()
 
-    # Sidebar controls
-    st.sidebar.header("Duplication and Transformation Settings")
+    # Sidebar controls for duplication
+    st.sidebar.header("Duplication Settings")
     num_duplicates = st.sidebar.number_input(
         "Number of Duplicates", min_value=0, max_value=10, value=2, step=1
     )
@@ -63,19 +83,21 @@ def main():
     offset_y = st.sidebar.number_input(
         "Offset Y (pixels)", min_value=-500, max_value=500, value=100, step=10
     )
-    scale = st.sidebar.number_input(
-        "Scale Factor", min_value=0.1, max_value=5.0, value=1.0, step=0.1
-    )
 
-    # Prepare transformations dictionary
+    # Sidebar control for zoom
+    st.sidebar.header("Zoom Settings")
+    zoom_level = st.sidebar.slider("Zoom Level", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+
+    # Prepare offsets dictionary
     offsets = {"x": offset_x, "y": offset_y}
 
-    # Apply transformations (duplication, offsets, and scaling)
-    modified_json = apply_transformations(json_data, num_duplicates, offsets, scale)
+    # Apply duplication and offsets
+    modified_json = apply_offsets(json_data, num_duplicates, offsets)
 
-    # Render the modified JSON animation
+    # Render the modified JSON animation with zoom
     st.subheader("Live Animation Preview")
-    st_lottie(modified_json, key="tree_animation")
+    zoom_html = render_lottie_with_zoom(modified_json, zoom_level)
+    st.components.v1.html(zoom_html, height=600)
 
 # Run the Streamlit app
 if __name__ == "__main__":
