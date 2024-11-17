@@ -11,7 +11,6 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Count the number of trees in the animation
 def count_trees(json_data):
     """
     Count the number of tree objects in the animation JSON.
@@ -25,8 +24,25 @@ def count_trees(json_data):
                 tree_count += len(layer["shapes"])  # Each shape could represent a tree
             else:
                 tree_count += 1  # Count the layer as one tree if no shapes found
-
     return tree_count
+
+def get_unique_tree_types(json_data):
+    """
+    Count the number of unique tree types based on shape properties.
+    """
+    unique_trees = set()
+    for layer in json_data.get("layers", []):
+        if "tree" in layer.get("nm", "").lower():
+            if "shapes" in layer:
+                # Add unique tree shapes to the set
+                for shape in layer["shapes"]:
+                    shape_key = json.dumps(shape, sort_keys=True)  # Use JSON serialization to identify unique shapes
+                    unique_trees.add(shape_key)
+            else:
+                # If no shapes are found, consider the layer itself as a unique tree type
+                unique_trees.add(layer.get("nm", "Unknown"))
+
+    return len(unique_trees), list(unique_trees)
 
 # Display parameters and allow editing in Streamlit sidebar
 def display_json_editor(json_data):
@@ -35,7 +51,14 @@ def display_json_editor(json_data):
 
     # Get the number of trees
     tree_count = count_trees(json_data)
+    unique_tree_count, unique_trees = get_unique_tree_types(json_data)
     st.sidebar.info(f"Number of Trees: {tree_count}")
+    st.sidebar.info(f"Number of Unique Tree Types: {unique_tree_count}")
+
+    # Display unique tree types
+    if st.sidebar.checkbox("Show Unique Tree Types"):
+        st.sidebar.text("Unique Trees (Debug):")
+        st.sidebar.json(unique_trees)
 
     # Loop through each "tree" in the JSON "layers"
     for index, layer in enumerate(updated_json.get("layers", [])):
