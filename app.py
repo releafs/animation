@@ -18,64 +18,85 @@ def count_trees(json_data):
     """
     tree_count = 0
     for layer in json_data.get("layers", []):
+        # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
+            # If the layer has shapes, count the individual shapes
             if "shapes" in layer:
-                tree_count += len(layer["shapes"])  # Count shapes as individual trees
+                tree_count += len(layer["shapes"])  # Each shape could represent a tree
             else:
                 tree_count += 1  # Count the layer as one tree if no shapes found
 
     return tree_count
 
-# Modify the JSON to display the specified number of trees
-def modify_tree_count(json_data, num_trees):
+# Calculate the spacing between trees based on their positions
+def calculate_tree_spacing(json_data):
     """
-    Modify the JSON to show only the specified number of trees.
+    Calculate the spacing between trees based on their positions.
+    Assumes consistent spacing and a grid-like layout.
     """
-    modified_json = json_data.copy()
-    current_tree_count = count_trees(modified_json)
-    
-    # Adjust layers or shapes to limit the number of trees
-    tree_layers = [layer for layer in modified_json["layers"] if "tree" in layer.get("nm", "").lower()]
-    
-    if len(tree_layers) > 0:
-        # Check if trees are in layers or shapes
-        for layer in tree_layers:
-            if "shapes" in layer:
-                # Modify shapes to limit the count
-                layer["shapes"] = layer["shapes"][:num_trees]  # Keep only the first num_trees shapes
-                num_trees -= len(layer["shapes"])  # Reduce the remaining count to handle next layer
-            else:
-                if num_trees <= 0:
-                    modified_json["layers"].remove(layer)  # Remove extra layers if not needed
-                num_trees -= 1
+    positions = []
 
-    return modified_json
+    # Collect positions of all trees
+    for layer in json_data.get("layers", []):
+        if "tree" in layer.get("nm", "").lower():
+            # Extract position (x, y) for the tree
+            position = layer.get("ks", {}).get("p", {}).get("k", [])
+            if position:
+                positions.append((position[0], position[1]))  # (x, y)
+
+    # Sort positions by X, then Y for a grid layout
+    positions = sorted(positions, key=lambda pos: (pos[1], pos[0]))  # Sort by Y first, then X
+
+    # Calculate differences between consecutive positions
+    x_differences = []
+    y_differences = []
+
+    for i in range(1, len(positions)):
+        x_diff = positions[i][0] - positions[i - 1][0]
+        y_diff = positions[i][1] - positions[i - 1][1]
+
+        if x_diff > 0:  # Same row, different X
+            x_differences.append(x_diff)
+        if y_diff > 0:  # Different row
+            y_differences.append(y_diff)
+
+    # Return the most common spacing as the fixed spacing
+    avg_x_spacing = sum(x_differences) / len(x_differences) if x_differences else 0
+    avg_y_spacing = sum(y_differences) / len(y_differences) if y_differences else 0
+
+    return avg_x_spacing, avg_y_spacing
 
 # Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data, num_trees):
+def display_json_editor(json_data):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Display editable tree count
-    tree_count = count_trees(updated_json)
+    # Get the number of trees
+    tree_count = count_trees(json_data)
     st.sidebar.info(f"Number of Trees: {tree_count}")
-    num_trees = st.sidebar.slider("Adjust Number of Trees", 1, tree_count, value=num_trees)
 
-    # Modify JSON to limit tree count
-    updated_json = modify_tree_count(updated_json, num_trees)
+    # Calculate tree spacing
+    x_spacing, y_spacing = calculate_tree_spacing(json_data)
+    st.sidebar.info(f"Tree Spacing (X, Y): ({x_spacing:.2f}, {y_spacing:.2f})")
 
-    # Edit position and scale of the first few trees
-    tree_layers = [layer for layer in updated_json["layers"] if "tree" in layer.get("nm", "").lower()]
-    for index, layer in enumerate(tree_layers[:num_trees]):
-        st.sidebar.subheader(f"Tree {index + 1}")
-        position = layer["ks"]["p"]["k"]
-        new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
-        new_y = st.sidebar.slider(f"Tree {index + 1} Position Y", 0, 1200, int(position[1]), step=10)
-        layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
+    # Loop through each "tree" in the JSON "layers"
+    for index, layer in enumerate(updated_json.get("layers", [])):
+        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
+            st.sidebar.subheader(f"Tree {index + 1}")
+            
+            # Edit position (x, y)
+            position = layer["ks"]["p"]["k"]
+            new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
+            new_y = st.sidebar.slider(f"Tree {index + 1} Position Y", 0, 1200, int(position[1]), step=10)
+            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
 
-        scale = layer["ks"]["s"]["k"]
-        new_scale = st.sidebar.slider(f"Tree {index + 1} Scale", 50, 300, int(scale[0]), step=10)
-        layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+            # Edit scale
+            scale = layer["ks"]["s"]["k"]
+            new_scale = st.sidebar.slider(f"Tree {index + 1} Scale", 50, 300, int(scale[0]), step=10)
+            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+
+            # Update the layer in the JSON data
+            updated_json["layers"][index] = layer
 
     return updated_json
 
@@ -87,11 +108,8 @@ def main():
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Initial number of trees to display
-    num_trees = count_trees(json_data)
-
     # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(json_data, num_trees)
+    modified_json = display_json_editor(json_data)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
