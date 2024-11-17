@@ -1,10 +1,9 @@
 import json
 import streamlit as st
 from streamlit_lottie import st_lottie
-import matplotlib.pyplot as plt
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Editor with Map", layout="wide")
+st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
 # Load the JSON file (tree.json)
 @st.cache(allow_output_mutation=True)
@@ -12,15 +11,14 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Count the number of trees and collect their labels and positions
-def count_trees_with_labels_and_positions(json_data):
+# Count the number of trees and collect their labels
+def count_trees_with_labels(json_data):
     """
-    Count the number of tree objects in the animation JSON and collect their labels and positions.
-    Returns a count, a list of labels, and a list of positions.
+    Count the number of tree objects in the animation JSON and collect their labels.
+    Returns a count and a list of labels.
     """
     tree_count = 0
     tree_labels = []
-    tree_positions = []
     
     for layer in json_data.get("layers", []):
         # Check if the layer is named "tree" or contains tree objects
@@ -29,95 +27,65 @@ def count_trees_with_labels_and_positions(json_data):
             if "shapes" in layer:
                 shape_count = len(layer["shapes"])
                 tree_count += shape_count
-                for i, shape in enumerate(layer["shapes"]):
+                for i in range(shape_count):
                     tree_labels.append(f"{layer['nm']} - Shape {i+1}")
-                    # Default position for each shape if available
-                    tree_positions.append(layer["ks"]["p"]["k"])
             else:
                 tree_count += 1
                 tree_labels.append(layer["nm"])
-                tree_positions.append(layer["ks"]["p"]["k"])  # Default position for a single tree
 
-    return tree_count, tree_labels, tree_positions
+    return tree_count, tree_labels
 
-# Function to display the position map
-def display_position_map(tree_positions, tree_labels, visibility):
+# Toggle shapes on/off
+def toggle_shapes(json_data, toggles):
     """
-    Displays a map of tree positions based on their coordinates.
+    Modify the JSON data to toggle visibility of shapes based on user input.
     """
-    # Filter positions based on visibility
-    visible_positions = [pos for pos, vis in zip(tree_positions, visibility) if vis]
-    visible_labels = [label for label, vis in zip(tree_labels, visibility) if vis]
+    updated_json = json_data.copy()
+    shape_index = 0  # Track the shape index globally
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    for pos, label in zip(visible_positions, visible_labels):
-        ax.scatter(pos[0], pos[1], label=label)
-
-    ax.set_title("Tree Position Map")
-    ax.set_xlabel("X Position")
-    ax.set_ylabel("Y Position")
-    ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.0), fontsize="small")
-    st.pyplot(fig)
-
-# Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data):
-    updated_json = json_data.copy()  # Create a copy to store modifications
-    st.sidebar.header("Edit Tree Animation Parameters")
-
-    # Get the number of trees, their labels, and positions
-    tree_count, tree_labels, tree_positions = count_trees_with_labels_and_positions(json_data)
-    st.sidebar.info(f"Number of Trees: {tree_count}")
-
-    # Sidebar for toggling visibility
-    st.sidebar.subheader("Tree Visibility")
-    visibility = [st.sidebar.checkbox(label, value=True) for label in tree_labels]
-
-    # Apply button
-    apply_changes = st.sidebar.button("Apply Changes")
-
-    # If Apply is clicked, refresh the view
-    if apply_changes:
-        st.experimental_rerun()
-
-    # Display position map
-    st.subheader("Tree Position Map")
-    display_position_map(tree_positions, tree_labels, visibility)
-
-    # Edit position and scale for visible trees
-    st.sidebar.subheader("Tree Parameters")
-    current_layer_index = 0  # Keep track of the layer index
-    for index, (label, pos, vis) in enumerate(zip(tree_labels, tree_positions, visibility)):
-        if vis:  # Only display sliders for visible trees
-            st.sidebar.subheader(f"Edit {label}")
-
-            # Edit position (x, y)
-            new_x = st.sidebar.slider(f"{label} Position X", 0, 1600, int(pos[0]), step=10)
-            new_y = st.sidebar.slider(f"{label} Position Y", 0, 1200, int(pos[1]), step=10)
-
-            # Update the correct layer in the JSON
-            updated_layer = updated_json["layers"][current_layer_index]
-            updated_layer["ks"]["p"]["k"] = [new_x, new_y, pos[2]]
-
-            # Edit scale
-            scale = updated_layer["ks"]["s"]["k"]
-            new_scale = st.sidebar.slider(f"{label} Scale", 50, 300, int(scale[0]), step=10)
-            updated_layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
-
-        # Increment the layer index
-        current_layer_index += 1
+    for layer in updated_json.get("layers", []):
+        if "tree" in layer.get("nm", "").lower():
+            # If the layer has shapes
+            if "shapes" in layer:
+                for shape in layer["shapes"]:
+                    # Use the global shape index to determine toggle status
+                    shape["hd"] = not toggles[shape_index]  # Set 'hd' (hidden) property
+                    shape_index += 1
+            else:
+                # For layers without shapes, toggle visibility using 'hd'
+                layer["hd"] = not toggles[shape_index]
+                shape_index += 1
 
     return updated_json
 
 # Main Streamlit app function
 def main():
-    st.title("Interactive Tree Animation Editor with Position Map")
-    st.markdown("Use the sidebar to adjust the tree animation parameters and toggle tree visibility.")
+    st.title("Interactive Tree Animation Editor")
+    st.markdown("Use the sidebar to toggle tree shapes and edit parameters. Apply changes to refresh the animation.")
 
     # Load JSON data from tree.json
     json_data = load_json()
-    
-    # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(json_data)
+
+    # Get the number of trees and their labels
+    tree_count, tree_labels = count_trees_with_labels(json_data)
+
+    # Sidebar - Toggles for each tree shape
+    st.sidebar.header("Tree Labels and Toggles")
+    st.sidebar.info(f"Number of Trees: {tree_count}")
+
+    # Create toggles for each tree
+    toggles = []
+    for label in tree_labels:
+        toggles.append(st.sidebar.checkbox(f"Show {label}", value=True))
+
+    # Sidebar - Apply Button
+    if st.sidebar.button("Apply Changes"):
+        # Update JSON based on toggles and refresh animation
+        modified_json = toggle_shapes(json_data, toggles)
+        st.session_state["modified_json"] = modified_json  # Store the modified JSON in session state
+    else:
+        # Load from session state if available
+        modified_json = st.session_state.get("modified_json", json_data)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
