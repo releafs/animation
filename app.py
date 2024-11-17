@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Preview", layout="wide")
+st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
 # Allowed shape indices
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
@@ -12,7 +12,7 @@ ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
 DEFAULT_POSITION_X = 1160
 DEFAULT_POSITION_Y = 710
 DEFAULT_SCALE = 400
-DUPLICATE_OFFSET_X = 600  # Offset for duplicated animation
+DEFAULT_GAP = 1500  # Default gap between the two animations
 
 # Load the JSON file (tree.json) with st.cache_data
 @st.cache_data
@@ -21,15 +21,14 @@ def load_json():
         return json.load(f)
 
 # Filter tree shapes in the JSON based on ALLOWED_SHAPES and set default values
-def prepare_json_with_duplicate(json_data):
+def prepare_json(json_data, position_x, position_y, scale):
     """
-    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES,
-    applies default position and scale for the "rows of trees" layer, and duplicates the animation.
+    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES
+    and applies position and scale values.
     """
-    prepared_data = json_data.copy()
-    duplicate_layers = []
-
-    for layer in prepared_data.get("layers", []):
+    filtered_data = json_data.copy()
+    
+    for layer in filtered_data.get("layers", []):
         # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
             # If the layer has shapes, filter only allowed shapes
@@ -37,39 +36,42 @@ def prepare_json_with_duplicate(json_data):
                 layer["shapes"] = [
                     shape for i, shape in enumerate(layer["shapes"]) if (i + 1) in ALLOWED_SHAPES
                 ]
-            # Apply default position and scale for "rows of trees"
+            # Apply position and scale values for "rows of trees"
             if "rows of trees" in layer.get("nm", "").lower():
-                layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, 0]  # Position
-                layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]  # Scale
-
-                # Create a duplicate of the layer with an offset
-                duplicate_layer = layer.copy()
-                duplicate_layer["nm"] = f"{layer['nm']} - Copy"
-                duplicate_layer["ks"]["p"]["k"] = [
-                    DEFAULT_POSITION_X + DUPLICATE_OFFSET_X,
-                    DEFAULT_POSITION_Y,
-                    0,
-                ]
-                duplicate_layers.append(duplicate_layer)
-
-    # Add the duplicated layers to the JSON
-    prepared_data["layers"].extend(duplicate_layers)
-    return prepared_data
+                layer["ks"]["p"]["k"] = [position_x, position_y, 0]  # Position
+                layer["ks"]["s"]["k"] = [scale, scale, 100]  # Scale
+    return filtered_data
 
 # Main Streamlit app function
 def main():
     st.title("Duplicated Tree Animation")
-    st.markdown("This animation shows two tree animations side by side.")
+    st.markdown("Control the parameters of the animations in the sidebar.")
+
+    # Sidebar controls
+    st.sidebar.header("Animation Controls")
+    gap = st.sidebar.slider("Gap Between Animations", 1000, 2000, DEFAULT_GAP, step=50)
+    scale = st.sidebar.slider("Rows of Trees Scale", 100, 1000, DEFAULT_SCALE, step=50)
+    position_y = st.sidebar.slider("Rows of Trees Position Y", 500, 1000, DEFAULT_POSITION_Y, step=10)
 
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Prepare the JSON with the duplicated animation
-    prepared_json = prepare_json_with_duplicate(json_data)
+    # Prepare the first animation (original position)
+    first_animation = prepare_json(json_data, DEFAULT_POSITION_X, position_y, scale)
 
-    # Render the prepared JSON animation
-    st.subheader("Live Animation Preview")
-    st_lottie(prepared_json, key="tree_animation")
+    # Prepare the second animation (offset by gap)
+    second_animation = prepare_json(json_data, DEFAULT_POSITION_X + gap, position_y, scale)
+
+    # Render the animations side by side
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Animation 1")
+        st_lottie(first_animation, key="animation1")
+
+    with col2:
+        st.subheader("Animation 2")
+        st_lottie(second_animation, key="animation2")
 
 # Run the Streamlit app
 if __name__ == "__main__":
