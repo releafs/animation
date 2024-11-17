@@ -19,106 +19,62 @@ def count_trees(json_data):
     tree_count = 0
     for layer in json_data.get("layers", []):
         if "tree" in layer.get("nm", "").lower():
-            # If the layer has shapes, count the individual shapes
             if "shapes" in layer:
-                tree_count += len(layer["shapes"])  # Each shape could represent a tree
+                tree_count += len(layer["shapes"])  # Count shapes as trees
             else:
-                tree_count += 1  # Count the layer as one tree if no shapes found
+                tree_count += 1  # Count as one tree if no shapes
     return tree_count
 
-# Calculate the spacing between trees
-def calculate_tree_spacing(json_data):
+# Add or remove trees dynamically
+def adjust_tree_count(json_data, desired_count, spacing=200):
     """
-    Calculate the spacing between trees based on their positions.
-    """
-    positions = []
-
-    # Collect positions of all trees
-    for layer in json_data.get("layers", []):
-        if "tree" in layer.get("nm", "").lower():
-            position = layer.get("ks", {}).get("p", {}).get("k", [])
-            if position:
-                positions.append((position[0], position[1]))  # (x, y)
-
-    # Sort positions by X and Y for a grid layout
-    positions = sorted(positions, key=lambda pos: (pos[1], pos[0]))  # Sort by Y first, then X
-
-    # Calculate differences between consecutive positions
-    x_differences = []
-    y_differences = []
-
-    for i in range(1, len(positions)):
-        x_diff = positions[i][0] - positions[i - 1][0]
-        y_diff = positions[i][1] - positions[i - 1][1]
-
-        if x_diff > 0:  # Same row, different X
-            x_differences.append(x_diff)
-        if y_diff > 0:  # Different row
-            y_differences.append(y_diff)
-
-    # Return the most common spacing as the fixed spacing
-    avg_x_spacing = sum(x_differences) / len(x_differences) if x_differences else 0
-    avg_y_spacing = sum(y_differences) / len(y_differences) if y_differences else 0
-
-    return avg_x_spacing, avg_y_spacing
-
-# Add or remove trees in the animation
-def update_tree_count(json_data, desired_count):
-    """
-    Add or remove trees in the animation to match the desired count.
+    Adjust the number of tree layers to match the desired count.
+    New trees will follow a consistent spacing rule.
     """
     current_count = count_trees(json_data)
-    layer_template = None
+    updated_json = json_data.copy()
 
-    # Find a template layer for adding new trees
-    for layer in json_data.get("layers", []):
-        if "tree" in layer.get("nm", "").lower():
-            layer_template = layer.copy()
-            break
+    if current_count < desired_count:
+        # Add more trees
+        for i in range(desired_count - current_count):
+            # Clone the first tree layer as a template
+            template_layer = next(
+                (layer for layer in updated_json["layers"] if "tree" in layer.get("nm", "").lower()), None
+            )
+            if template_layer:
+                new_layer = template_layer.copy()
+                new_layer["nm"] = f"tree_{current_count + i + 1}"  # Update tree name
+                # Adjust position (place next to the existing trees)
+                new_x_position = template_layer["ks"]["p"]["k"][0] + (i + 1) * spacing
+                new_layer["ks"]["p"]["k"][0] = new_x_position
+                updated_json["layers"].append(new_layer)
+    elif current_count > desired_count:
+        # Remove extra trees
+        updated_json["layers"] = [
+            layer for layer in updated_json["layers"] if not ("tree" in layer.get("nm", "").lower() and int(layer.get("nm", "").split("_")[-1]) > desired_count)
+        ]
 
-    if not layer_template:
-        st.error("No tree layer template found in the JSON.")
-        return json_data
-
-    # Add trees if the count is less than desired
-    if desired_count > current_count:
-        for _ in range(desired_count - current_count):
-            new_layer = layer_template.copy()
-            # Change position slightly for the new tree
-            new_layer["ks"]["p"]["k"][0] += 50  # Shift X position
-            new_layer["ks"]["p"]["k"][1] += 50  # Shift Y position
-            json_data["layers"].append(new_layer)
-
-    # Remove trees if the count is more than desired
-    elif desired_count < current_count:
-        tree_layers = [layer for layer in json_data.get("layers", []) if "tree" in layer.get("nm", "").lower()]
-        json_data["layers"] = [layer for layer in json_data["layers"] if layer not in tree_layers[:current_count - desired_count]]
-
-    return json_data
+    return updated_json
 
 # Display parameters and allow editing in Streamlit sidebar
 def display_json_editor(json_data):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Count trees and calculate spacing
-    tree_count = count_trees(json_data)
-    x_spacing, y_spacing = calculate_tree_spacing(json_data)
+    # Get current tree count
+    current_count = count_trees(json_data)
 
-    # Display tree count and spacing
-    st.sidebar.info(f"Number of Trees: {tree_count}")
-    st.sidebar.info(f"Tree Spacing (X, Y): ({x_spacing:.2f}, {y_spacing:.2f})")
+    # Slider to adjust the number of trees
+    desired_count = st.sidebar.slider("Number of Trees", min_value=1, max_value=100, value=current_count, step=1)
 
-    # Allow user to modify the number of trees
-    desired_count = st.sidebar.slider("Set Number of Trees", min_value=1, max_value=100, value=tree_count)
-    if desired_count != tree_count:
-        updated_json = update_tree_count(updated_json, desired_count)
+    # Adjust the tree count dynamically
+    updated_json = adjust_tree_count(updated_json, desired_count)
 
-    # Loop through each tree layer for additional modifications
+    # Loop through each "tree" in the JSON "layers"
     for index, layer in enumerate(updated_json.get("layers", [])):
         if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
             st.sidebar.subheader(f"Tree {index + 1}")
-
+            
             # Edit position (x, y)
             position = layer["ks"]["p"]["k"]
             new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
@@ -142,7 +98,7 @@ def main():
 
     # Load JSON data from tree.json
     json_data = load_json()
-
+    
     # Display editable parameters in sidebar and apply changes
     modified_json = display_json_editor(json_data)
 
