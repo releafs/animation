@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Editor", layout="wide")
+st.set_page_config(page_title="Tree Animation App", layout="wide")
 
 # Load the JSON file (tree.json)
 @st.cache(allow_output_mutation=True)
@@ -11,81 +11,82 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Count the number of trees and show layer breakdown
-def count_trees_with_layer_info(json_data):
+# Count trees and prepare visibility controls
+def setup_tree_controls(json_data):
     """
-    Count the number of trees in the animation JSON and identify which layer they belong to.
-    Returns:
-        - Total tree count
-        - Layer-wise breakdown
+    Prepare a visibility map for individual trees.
     """
-    total_trees = 0
-    layer_tree_counts = {}  # To store tree count per layer
-
+    tree_visibility = {}
     for layer in json_data.get("layers", []):
-        # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
-            # If the layer has shapes, count the individual shapes
-            if "shapes" in layer:
-                tree_count = len(layer["shapes"])  # Count shapes in the layer
-                layer_tree_counts[layer["nm"]] = tree_count
-                total_trees += tree_count
-            else:
-                layer_tree_counts[layer["nm"]] = 1  # Count the layer as one tree if no shapes found
-                total_trees += 1
+            for i, shape in enumerate(layer.get("shapes", [])):
+                tree_visibility[i] = True  # Default visibility is True
+    return tree_visibility
 
-    return total_trees, layer_tree_counts
-
-# Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data):
-    updated_json = json_data.copy()  # Create a copy to store modifications
-    st.sidebar.header("Edit Tree Animation Parameters")
-
-    # Get the total tree count and layer-wise breakdown
-    total_trees, layer_tree_counts = count_trees_with_layer_info(json_data)
-    st.sidebar.info(f"Number of Trees: {total_trees}")
-
-    # Show layer-wise breakdown
-    st.sidebar.subheader("Tree Count per Layer")
-    for layer_name, count in layer_tree_counts.items():
-        st.sidebar.write(f"{layer_name}: {count} trees")
-
-    # Loop through each "tree" in the JSON "layers"
-    for index, layer in enumerate(updated_json.get("layers", [])):
-        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
-            st.sidebar.subheader(f"Tree {index + 1}")
-            
-            # Edit position (x, y)
-            position = layer["ks"]["p"]["k"]
-            new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
-            new_y = st.sidebar.slider(f"Tree {index + 1} Position Y", 0, 1200, int(position[1]), step=10)
-            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
-
-            # Edit scale
-            scale = layer["ks"]["s"]["k"]
-            new_scale = st.sidebar.slider(f"Tree {index + 1} Scale", 50, 300, int(scale[0]), step=10)
-            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
-
-            # Update the layer in the JSON data
-            updated_json["layers"][index] = layer
-
+# Update tree visibility in the JSON
+def update_tree_visibility(json_data, visibility_map):
+    updated_json = json_data.copy()
+    for layer in updated_json.get("layers", []):
+        if "tree" in layer.get("nm", "").lower():
+            for i, shape in enumerate(layer.get("shapes", [])):
+                if i in visibility_map and not visibility_map[i]:
+                    shape["hd"] = True  # Hide the tree if switched off
+                elif i in visibility_map:
+                    shape.pop("hd", None)  # Ensure it's visible if switched on
     return updated_json
 
-# Main Streamlit app function
-def main():
+# Main function for the animation page
+def animation_page(json_data):
     st.title("Interactive Tree Animation Editor")
     st.markdown("Use the sidebar to adjust the tree animation parameters.")
 
-    # Load JSON data from tree.json
-    json_data = load_json()
-    
-    # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(json_data)
+    # Apply visibility controls from session state
+    visibility_map = st.session_state.get("visibility_map", {})
+    modified_json = update_tree_visibility(json_data, visibility_map)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
     st_lottie(modified_json, key="tree_animation")
 
-# Run the Streamlit app
+    # Link to Tree Control Page
+    if st.button("Go to Tree Control Page"):
+        st.session_state["current_page"] = "Tree Control"
+
+# Tree control page to manage visibility
+def tree_control_page(json_data):
+    st.title("Tree Control Page")
+    st.markdown("Manage the visibility of trees in the animation.")
+
+    # Initialize visibility map in session state if not already done
+    if "visibility_map" not in st.session_state:
+        st.session_state["visibility_map"] = setup_tree_controls(json_data)
+
+    # Display tree controls as a table
+    visibility_map = st.session_state["visibility_map"]
+    st.subheader("Tree Visibility Table")
+    for tree_id, is_visible in visibility_map.items():
+        visibility_map[tree_id] = st.checkbox(
+            f"Tree {tree_id + 1}", value=is_visible, key=f"tree_{tree_id}"
+        )
+
+    # Link back to the animation page
+    if st.button("Go to Animation Editor"):
+        st.session_state["current_page"] = "Animation Editor"
+
+# Main Streamlit app function
+def main():
+    # Load the JSON file
+    json_data = load_json()
+
+    # Initialize session state for page navigation
+    if "current_page" not in st.session_state:
+        st.session_state["current_page"] = "Animation Editor"
+
+    # Page navigation
+    if st.session_state["current_page"] == "Animation Editor":
+        animation_page(json_data)
+    elif st.session_state["current_page"] == "Tree Control":
+        tree_control_page(json_data)
+
 if __name__ == "__main__":
     main()
