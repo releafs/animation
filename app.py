@@ -1,4 +1,5 @@
 import json
+import random
 import streamlit as st
 from streamlit_lottie import st_lottie
 
@@ -13,31 +14,48 @@ def load_json():
 
 # Count the number of trees in the animation
 def count_trees(json_data):
-    """
-    Count the number of tree objects in the animation JSON.
-    """
-    tree_count = 0
-    for layer in json_data.get("layers", []):
-        # Check if the layer is named "tree" or contains tree objects
-        if "tree" in layer.get("nm", "").lower():
-            # If the layer has shapes, count the individual shapes
-            if "shapes" in layer:
-                tree_count += len(layer["shapes"])  # Each shape could represent a tree
-            else:
-                tree_count += 1  # Count the layer as one tree if no shapes found
+    return sum(1 for layer in json_data.get("layers", []) if "tree" in layer.get("nm", "").lower())
 
-    return tree_count
+# Add or remove trees based on user input
+def adjust_tree_count(json_data, target_tree_count):
+    updated_json = json_data.copy()
+    current_tree_count = count_trees(updated_json)
+    
+    if target_tree_count > current_tree_count:
+        # Add new trees
+        for i in range(target_tree_count - current_tree_count):
+            new_tree = {
+                "nm": f"tree_{current_tree_count + i + 1}",
+                "ks": {
+                    "p": {"k": [random.randint(0, 1600), random.randint(0, 1200), 0]},  # Random position
+                    "s": {"k": [100, 100, 100]},  # Default scale
+                },
+                "shapes": []  # Add shapes if needed
+            }
+            updated_json["layers"].append(new_tree)
+    elif target_tree_count < current_tree_count:
+        # Remove excess trees
+        updated_json["layers"] = [
+            layer for layer in updated_json["layers"] if "tree" not in layer.get("nm", "").lower()
+        ][:target_tree_count] + [
+            layer for layer in updated_json["layers"] if "tree" not in layer.get("nm", "").lower()
+        ]
+
+    return updated_json
 
 # Display parameters and allow editing in Streamlit sidebar
 def display_json_editor(json_data):
-    updated_json = json_data.copy()  # Create a copy to store modifications
+    updated_json = json_data.copy()
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Get the number of trees
-    tree_count = count_trees(json_data)
-    st.sidebar.info(f"Number of Trees: {tree_count}")
+    # Editable number of trees
+    current_tree_count = count_trees(updated_json)
+    target_tree_count = st.sidebar.number_input(
+        "Number of Trees", min_value=0, value=current_tree_count, step=1
+    )
+    updated_json = adjust_tree_count(updated_json, target_tree_count)
 
-    # Add collective controls for all trees
+    # Collective controls for all trees
     st.sidebar.subheader("All Trees Settings")
 
     # Control collective position offset
