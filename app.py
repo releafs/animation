@@ -4,7 +4,7 @@ from streamlit_lottie import st_lottie
 import copy
 
 # Configure Streamlit page
-st.set_page_config(page_title="Duplicate and Offset Tree Animation with Zoom", layout="wide")
+st.set_page_config(page_title="Dynamic Display for Tree Animation", layout="wide")
 
 # Load the JSON file (modified_tree_animation.json) with st.cache_data
 @st.cache_data
@@ -45,13 +45,21 @@ def apply_offsets(json_data, num_duplicates, original_offsets, duplicate_offsets
 
     return modified_data
 
-# Render Lottie with zoom functionality and adjustable display size using HTML
-def render_lottie_with_zoom(lottie_data, zoom_level, display_height):
+# Render Lottie with dynamic sizing using JSON metadata
+def render_lottie_dynamic(lottie_data, zoom_level):
     """
-    Embed Lottie animation in HTML with adjustable zoom using CSS transforms and adjustable display size.
+    Embed Lottie animation in HTML with dynamic sizing based on animation metadata and zoom.
     """
+    # Extract the original width and height from Lottie JSON metadata
+    original_width = lottie_data.get("w", 1920)  # Default width if not available
+    original_height = lottie_data.get("h", 1080)  # Default height if not available
+
+    # Calculate display dimensions with zoom applied
+    display_width = int(original_width * zoom_level)
+    display_height = int(original_height * zoom_level)
+
     html_content = f"""
-    <div style="display: flex; justify-content: center; align-items: center; height: {display_height}px; overflow: hidden;">
+    <div style="display: flex; justify-content: center; align-items: center; width: {display_width}px; height: {display_height}px; overflow: hidden;">
         <div style="transform: scale({zoom_level}); transform-origin: center;">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
             <div id="lottie-animation"></div>
@@ -68,12 +76,12 @@ def render_lottie_with_zoom(lottie_data, zoom_level, display_height):
         </div>
     </div>
     """
-    return html_content
+    return html_content, display_width, display_height
 
 # Main Streamlit app function
 def main():
-    st.title("Duplicate and Offset Tree Animation with Adjustable Display")
-    st.markdown("Use the sidebar to control offsets for the original animation and duplicates, zoom, and adjust the display size.")
+    st.title("Dynamic Display for Tree Animation")
+    st.markdown("This app dynamically adjusts the display size based on the animation's dimensions and zoom level.")
 
     # Load JSON data from modified_tree_animation.json
     json_data = load_json()
@@ -103,12 +111,6 @@ def main():
     st.sidebar.header("Zoom Settings")
     zoom_level = st.sidebar.slider("Zoom Level", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
 
-    # Sidebar control for display height
-    st.sidebar.header("Display Settings")
-    display_height = st.sidebar.number_input(
-        "Display Height (pixels)", min_value=400, max_value=2000, value=600, step=50
-    )
-
     # Prepare offsets dictionaries
     original_offsets = {"x": original_offset_x, "y": original_offset_y}
     duplicate_offsets = {"x": duplicate_offset_x, "y": duplicate_offset_y}
@@ -116,10 +118,14 @@ def main():
     # Apply offsets to original animation and duplicates
     modified_json = apply_offsets(json_data, num_duplicates, original_offsets, duplicate_offsets)
 
-    # Render the modified JSON animation with zoom and adjustable display size
+    # Render the modified JSON animation with dynamic sizing
     st.subheader("Live Animation Preview")
-    zoom_html = render_lottie_with_zoom(modified_json, zoom_level, display_height)
-    st.components.v1.html(zoom_html, height=display_height + 100)
+    zoom_html, display_width, display_height = render_lottie_dynamic(modified_json, zoom_level)
+    st.components.v1.html(zoom_html, height=display_height + 50, width=display_width)
+
+    # Display metadata
+    st.sidebar.info(f"Original Animation Dimensions: {json_data.get('w', 'Unknown')} x {json_data.get('h', 'Unknown')}")
+    st.sidebar.info(f"Display Dimensions: {display_width}px x {display_height}px")
 
 # Run the Streamlit app
 if __name__ == "__main__":
