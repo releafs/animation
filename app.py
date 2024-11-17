@@ -6,7 +6,7 @@ from streamlit_lottie import st_lottie
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache_data
 def load_json():
     """
     Load the JSON file (tree.json).
