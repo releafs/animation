@@ -28,7 +28,7 @@ def count_trees(json_data):
 
     return tree_count
 
-# Calculate the spacing between trees based on their positions
+# Calculate the spacing between trees
 def calculate_tree_spacing(json_data):
     """
     Calculate the spacing between trees based on their positions.
@@ -107,6 +107,16 @@ def main():
 
     # Load JSON data from tree.json
     json_data = load_json()
+
+    # Count the number of trees
+    tree_count = count_trees(json_data)
+
+    # Calculate tree spacing
+    x_spacing, y_spacing = calculate_tree_spacing(json_data)
+
+    # Display tree count and spacing
+    st.sidebar.info(f"Number of Trees: {tree_count}")
+    st.sidebar.info(f"Tree Spacing (X, Y): ({x_spacing:.2f}, {y_spacing:.2f})")
 
     # Display editable parameters in sidebar and apply changes
     modified_json = display_json_editor(json_data)
