@@ -43,10 +43,11 @@ def apply_offsets(json_data, num_duplicates, offsets):
 def render_lottie_with_zoom(lottie_data, zoom_level, preview_width, preview_height):
     """
     Embed Lottie animation in HTML with adjustable zoom and preview dimensions.
+    Ensures the animation is centered correctly.
     """
     html_content = f"""
-    <div style="display: flex; justify-content: center; align-items: center; width: {preview_width}px; height: {preview_height}px; overflow: hidden;">
-        <div style="transform: scale({zoom_level}); transform-origin: center;">
+    <div style="display: flex; justify-content: center; align-items: center; width: {preview_width}px; height: {preview_height}px; overflow: hidden; background-color: white;">
+        <div style="transform: scale({zoom_level}); transform-origin: center center; width: 100%; height: 100%;">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
             <div id="lottie-animation"></div>
             <script>
