@@ -5,6 +5,9 @@ from streamlit_lottie import st_lottie
 # Configure Streamlit page
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
+# Allowed shape indices
+ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
+
 # Load the JSON file (tree.json) with st.cache_data
 @st.cache_data
 def load_json():
@@ -14,8 +17,8 @@ def load_json():
 # Count the number of trees and collect their labels
 def count_trees_with_labels(json_data):
     """
-    Count the number of tree objects in the animation JSON and collect their labels.
-    Returns a count and a list of labels.
+    Count the number of allowed tree shapes in the animation JSON and collect their labels.
+    Filters shapes based on ALLOWED_SHAPES.
     """
     tree_count = 0
     tree_labels = []
@@ -23,12 +26,12 @@ def count_trees_with_labels(json_data):
     for layer in json_data.get("layers", []):
         # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
-            # If the layer has shapes, count the individual shapes and use layer name as a prefix
+            # If the layer has shapes, filter only allowed shapes
             if "shapes" in layer:
-                shape_count = len(layer["shapes"])
-                tree_count += shape_count
-                for i in range(shape_count):
-                    tree_labels.append((f"{layer['nm']} - Shape {i+1}", layer["shapes"][i]))
+                for i, shape in enumerate(layer["shapes"]):
+                    if (i + 1) in ALLOWED_SHAPES:  # Filter shapes by allowed indices (1-based)
+                        tree_count += 1
+                        tree_labels.append((f"{layer['nm']} - Shape {i+1}", shape))
             else:
                 tree_count += 1
                 tree_labels.append((layer["nm"], layer))
