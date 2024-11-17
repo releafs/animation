@@ -43,7 +43,7 @@ def prepare_json(json_data):
 
 # Main Streamlit app function
 def main():
-    st.title("Tree Animation Preview")
+    st.title("Tree Animation Preview and Download")
     st.markdown("This animation uses the default parameters for the tree shapes and 'rows of trees'.")
 
     # Load JSON data from tree.json
@@ -55,6 +55,16 @@ def main():
     # Render the prepared JSON animation
     st.subheader("Live Animation Preview")
     st_lottie(prepared_json, key="tree_animation")
+
+    # Provide a download button for the modified JSON
+    st.subheader("Download Modified JSON")
+    json_str = json.dumps(prepared_json, indent=4)  # Convert JSON to a string with pretty formatting
+    st.download_button(
+        label="Download JSON File",
+        data=json_str,
+        file_name="modified_tree_animation.json",
+        mime="application/json"
+    )
 
 # Run the Streamlit app
 if __name__ == "__main__":
