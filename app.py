@@ -28,34 +28,35 @@ def count_trees(json_data):
 
 def get_unique_tree_types(json_data):
     """
-    Count the number of unique tree types based on shape properties.
+    Identify unique tree types based on shape and color properties.
     """
     unique_trees = set()
     for layer in json_data.get("layers", []):
         if "tree" in layer.get("nm", "").lower():
             if "shapes" in layer:
-                # Add unique tree shapes to the set
                 for shape in layer["shapes"]:
-                    shape_key = json.dumps(shape, sort_keys=True)  # Use JSON serialization to identify unique shapes
-                    unique_trees.add(shape_key)
-            else:
-                # If no shapes are found, consider the layer itself as a unique tree type
-                unique_trees.add(layer.get("nm", "Unknown"))
-
-    return len(unique_trees), list(unique_trees)
+                    # Extract the key properties for identifying unique shapes
+                    shape_data = {
+                        "path": shape.get("ks", {}).get("k", {}),  # Shape path
+                        "fill": shape.get("c", {}).get("k", {})  # Fill color
+                    }
+                    unique_trees.add(json.dumps(shape_data, sort_keys=True))  # Serialize for uniqueness
+    return len(unique_trees), [json.loads(tree) for tree in unique_trees]  # Deserialize for debugging
 
 # Display parameters and allow editing in Streamlit sidebar
 def display_json_editor(json_data):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Get the number of trees
+    # Get the number of trees and unique types
     tree_count = count_trees(json_data)
     unique_tree_count, unique_trees = get_unique_tree_types(json_data)
+
+    # Display counts in the sidebar
     st.sidebar.info(f"Number of Trees: {tree_count}")
     st.sidebar.info(f"Number of Unique Tree Types: {unique_tree_count}")
 
-    # Display unique tree types
+    # Optionally display details of unique tree types
     if st.sidebar.checkbox("Show Unique Tree Types"):
         st.sidebar.text("Unique Trees (Debug):")
         st.sidebar.json(unique_trees)
