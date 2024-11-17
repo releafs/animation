@@ -49,9 +49,9 @@ def main():
 
     # Sidebar controls
     st.sidebar.header("Animation Controls")
-    gap = st.sidebar.slider("Gap Between Animations", 1000, 2000, DEFAULT_GAP, step=50)
-    scale = st.sidebar.slider("Rows of Trees Scale", 100, 1000, DEFAULT_SCALE, step=50)
-    position_y = st.sidebar.slider("Rows of Trees Position Y", 500, 1000, DEFAULT_POSITION_Y, step=10)
+    gap = st.sidebar.slider("Gap Between Animations", 1000, 2000, DEFAULT_GAP, step=50, value=DEFAULT_GAP)
+    scale = st.sidebar.slider("Rows of Trees Scale", 100, 1000, DEFAULT_SCALE, step=50, value=DEFAULT_SCALE)
+    position_y = st.sidebar.slider("Rows of Trees Position Y", 500, 1000, DEFAULT_POSITION_Y, step=10, value=DEFAULT_POSITION_Y)
 
     # Load JSON data from tree.json
     json_data = load_json()
