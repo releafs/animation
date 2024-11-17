@@ -5,10 +5,10 @@ from streamlit_lottie import st_lottie
 # Configure Streamlit page
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
 
-# Allowed shape indices (default)
+# Allowed shape indices
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
 
-# Default values for "Rows of trees"
+# Default position and scale for "rows of trees"
 DEFAULT_POSITION_X = 1160
 DEFAULT_POSITION_Y = 710
 DEFAULT_SCALE = 400
@@ -19,116 +19,42 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Filter tree shapes in the JSON based on ALLOWED_SHAPES
-def filter_tree_shapes(json_data):
+# Filter tree shapes in the JSON based on ALLOWED_SHAPES and set default values
+def prepare_json(json_data):
     """
-    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES.
+    Filters the tree shapes to include only those with indices in ALLOWED_SHAPES
+    and applies default position and scale for the "rows of trees" layer.
     """
     filtered_data = json_data.copy()
     
     for layer in filtered_data.get("layers", []):
         # Check if the layer is named "tree" or contains tree objects
-        if "tree" in layer.get("nm", "").lower() and "shapes" in layer:
-            # Keep only the allowed shapes
-            layer["shapes"] = [
-                shape for i, shape in enumerate(layer["shapes"]) if (i + 1) in ALLOWED_SHAPES
-            ]
-    return filtered_data
-
-# Count the number of trees and collect their labels
-def count_trees_with_labels(json_data):
-    """
-    Count the number of allowed tree shapes in the animation JSON and collect their labels.
-    Filters shapes based on ALLOWED_SHAPES.
-    """
-    tree_count = 0
-    tree_labels = []
-    
-    for layer in json_data.get("layers", []):
-        # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
             # If the layer has shapes, filter only allowed shapes
             if "shapes" in layer:
-                for i, shape in enumerate(layer["shapes"]):
-                    if (i + 1) in ALLOWED_SHAPES:  # Filter shapes by allowed indices (1-based)
-                        tree_count += 1
-                        tree_labels.append((f"{layer['nm']} - Shape {i+1}", shape))
-            else:
-                tree_count += 1
-                tree_labels.append((layer["nm"], layer))
-
-    return tree_count, tree_labels
-
-# Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data):
-    updated_json = json_data.copy()  # Create a copy to store modifications
-    st.sidebar.header("Edit Tree Animation Parameters")
-
-    # Get the number of trees and their labels
-    tree_count, tree_labels = count_trees_with_labels(json_data)
-    st.sidebar.info(f"Number of Trees: {tree_count}")
-
-    # Create a dictionary to track visibility of each shape
-    visibility = {}
-
-    # Display tree labels with checkboxes
-    st.sidebar.subheader("Tree Labels")
-    for label, shape in tree_labels:
-        # Add a checkbox to toggle visibility
-        visibility[label] = st.sidebar.checkbox(label, value=True)
-
-        # Adjust opacity based on visibility
-        if isinstance(shape, dict) and "it" in shape:  # Check if shape has sub-items
-            for item in shape["it"]:
-                if "o" in item:  # Look for opacity property
-                    item["o"]["k"] = 100 if visibility[label] else 0
-        elif "o" in shape:  # Directly adjust layer opacity
-            shape["o"]["k"] = 100 if visibility[label] else 0
-
-    # Allow other parameter adjustments if needed
-    for index, layer in enumerate(updated_json.get("layers", [])):
-        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
-            st.sidebar.subheader(f"Edit {layer['nm']}")
-
-            # Set default values for "Rows of trees"
+                layer["shapes"] = [
+                    shape for i, shape in enumerate(layer["shapes"]) if (i + 1) in ALLOWED_SHAPES
+                ]
+            # Apply default position and scale for "rows of trees"
             if "rows of trees" in layer.get("nm", "").lower():
-                layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, layer["ks"]["p"]["k"][2]]
-                layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]
-
-            # Edit position (x, y)
-            position = layer["ks"]["p"]["k"]
-            new_x = st.sidebar.slider(f"{layer['nm']} Position X", 0, 1600, int(position[0]), step=10)
-            new_y = st.sidebar.slider(f"{layer['nm']} Position Y", 0, 1200, int(position[1]), step=10)
-            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
-
-            # Edit scale
-            scale = layer["ks"]["s"]["k"]
-            max_scale = 1000 if "rows of trees" in layer.get("nm", "").lower() else 300
-            new_scale = st.sidebar.slider(f"{layer['nm']} Scale", 50, max_scale, int(scale[0]), step=10)
-            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
-
-            # Update the layer in the JSON data
-            updated_json["layers"][index] = layer
-
-    return updated_json
+                layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, 0]  # Position
+                layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]  # Scale
+    return filtered_data
 
 # Main Streamlit app function
 def main():
-    st.title("Interactive Tree Animation Editor")
-    st.markdown("Use the sidebar to adjust the tree animation parameters and toggle individual tree shapes.")
+    st.title("Tree Animation Preview")
+    st.markdown("This animation uses the default parameters for the tree shapes and 'rows of trees'.")
 
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Filter tree shapes to include only allowed shapes
-    filtered_json = filter_tree_shapes(json_data)
-    
-    # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(filtered_json)
+    # Prepare the JSON by filtering tree shapes and setting default values
+    prepared_json = prepare_json(json_data)
 
-    # Render the modified JSON animation
+    # Render the prepared JSON animation
     st.subheader("Live Animation Preview")
-    st_lottie(modified_json, key="tree_animation")
+    st_lottie(prepared_json, key="tree_animation")
 
 # Run the Streamlit app
 if __name__ == "__main__":
