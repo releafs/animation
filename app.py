@@ -42,7 +42,7 @@ def count_trees_with_positions(json_data):
     return tree_count, tree_labels, tree_positions
 
 # Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data):
+def display_json_editor(json_data, visibility_states):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
@@ -50,11 +50,12 @@ def display_json_editor(json_data):
     tree_count, tree_labels, tree_positions = count_trees_with_positions(json_data)
     st.sidebar.info(f"Number of Trees: {tree_count}")
 
-    # Toggle visibility for each shape
-    visibility = []
+    # Visibility toggle for each shape
     st.sidebar.subheader("Toggle Tree Visibility")
-    for label in tree_labels:
-        is_visible = st.sidebar.checkbox(f"Show {label}", value=True)
+    visibility = []
+    for idx, label in enumerate(tree_labels):
+        is_visible = st.sidebar.checkbox(f"Show {label}", value=visibility_states.get(label, True))
+        visibility_states[label] = is_visible  # Save the state
         visibility.append(is_visible)
 
     # Loop through each "tree" in the JSON "layers"
@@ -76,7 +77,7 @@ def display_json_editor(json_data):
             # Update the layer in the JSON data
             updated_json["layers"][index] = layer
 
-    return updated_json, tree_positions, visibility
+    return updated_json, tree_positions, visibility, tree_labels
 
 # Plot the position map of trees
 def plot_tree_positions(positions, labels, visibility):
@@ -120,19 +121,25 @@ def main():
 
     # Load JSON data from tree.json
     json_data = load_json()
-    
+
+    # Maintain visibility state for each tree
+    if "visibility_states" not in st.session_state:
+        st.session_state.visibility_states = {}
+
     # Display editable parameters in sidebar and apply changes
-    modified_json, tree_positions, visibility = display_json_editor(json_data)
+    modified_json, tree_positions, visibility, tree_labels = display_json_editor(json_data, st.session_state.visibility_states)
 
-    # Render the modified JSON animation
-    st.subheader("Live Animation Preview")
-    st_lottie(modified_json, key="tree_animation")
+    # Add an "Apply" button
+    apply_changes = st.sidebar.button("Apply Changes")
+    if apply_changes:
+        # Render the modified JSON animation
+        st.subheader("Live Animation Preview")
+        st_lottie(modified_json, key="tree_animation")
 
-    # Plot the tree positions on a map
-    st.subheader("Tree Position Map")
-    _, tree_labels, _ = count_trees_with_positions(json_data)
-    tree_map = plot_tree_positions(tree_positions, tree_labels, visibility)
-    st.pyplot(tree_map)
+        # Plot the tree positions on a map
+        st.subheader("Tree Position Map")
+        tree_map = plot_tree_positions(tree_positions, tree_labels, visibility)
+        st.pyplot(tree_map)
 
 # Run the Streamlit app
 if __name__ == "__main__":
