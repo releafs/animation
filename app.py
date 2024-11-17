@@ -11,10 +11,19 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
+# Count the number of trees in the animation
+def count_trees(json_data):
+    tree_count = sum(1 for layer in json_data.get("layers", []) if "tree" in layer.get("nm", "").lower())
+    return tree_count
+
 # Display parameters and allow editing in Streamlit sidebar
 def display_json_editor(json_data):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
+
+    # Get the number of trees
+    tree_count = count_trees(json_data)
+    st.sidebar.info(f"Number of Trees: {tree_count}")
 
     # Loop through each "tree" in the JSON "layers"
     for index, layer in enumerate(updated_json.get("layers", [])):
