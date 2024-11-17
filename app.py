@@ -11,9 +11,20 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Count the number of trees in the animation
 def count_trees(json_data):
-    tree_count = sum(1 for layer in json_data.get("layers", []) if "tree" in layer.get("nm", "").lower())
+    """
+    Count the number of tree objects in the animation JSON.
+    """
+    tree_count = 0
+    for layer in json_data.get("layers", []):
+        # Check if the layer is named "tree" or contains tree objects
+        if "tree" in layer.get("nm", "").lower():
+            # If the layer has shapes, count the individual shapes
+            if "shapes" in layer:
+                tree_count += len(layer["shapes"])  # Each shape could represent a tree
+            else:
+                tree_count += 1  # Count the layer as one tree if no shapes found
+
     return tree_count
 
 # Display parameters and allow editing in Streamlit sidebar
