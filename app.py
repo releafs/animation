@@ -1,14 +1,10 @@
 import json
+import copy
 import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
 st.set_page_config(page_title="Tree Animation Editor", layout="wide")
-
-# Clear the cache when the app is reloaded
-@st.cache_data.clear
-def clear_cache():
-    pass
 
 # Load the JSON file (tree.json)
 @st.cache(allow_output_mutation=True)
@@ -24,51 +20,52 @@ def count_trees(json_data):
     tree_count = 0
     for layer in json_data.get("layers", []):
         if "tree" in layer.get("nm", "").lower():
-            # If the layer has shapes, count the individual shapes
             if "shapes" in layer:
-                tree_count += len(layer["shapes"])  # Each shape could represent a tree
+                tree_count += len(layer["shapes"])
             else:
-                tree_count += 1  # Count the layer as one tree if no shapes found
+                tree_count += 1
     return tree_count
 
-# Add a new tree layer to the JSON
+# Add a new tree layer
 def add_tree(json_data):
     """
-    Add a new tree layer to the animation JSON by duplicating an existing tree layer.
+    Add a new tree by duplicating an existing tree layer.
     """
-    for layer in json_data.get("layers", []):
+    for layer in json_data["layers"]:
         if "tree" in layer.get("nm", "").lower():
-            new_tree = layer.copy()
-            new_tree["nm"] = "tree_copy"  # Rename the tree layer
-            new_tree["ks"]["p"]["k"][0] += 50  # Offset position X for uniqueness
-            json_data["layers"].append(new_tree)
-            break  # Add only one tree
+            new_tree = copy.deepcopy(layer)  # Duplicate the first tree layer
+            new_tree["nm"] = f"tree_{len(json_data['layers']) + 1}"  # Rename the layer
+            json_data["layers"].append(new_tree)  # Add it to the layers
+            break
+    return json_data
 
-# Remove the last tree layer from the JSON
+# Remove the last tree layer
 def remove_tree(json_data):
     """
-    Remove the last tree layer from the animation JSON.
+    Remove the last tree layer.
     """
-    for i in reversed(range(len(json_data.get("layers", [])))):
+    for i in range(len(json_data["layers"]) - 1, -1, -1):  # Iterate layers in reverse
         if "tree" in json_data["layers"][i].get("nm", "").lower():
-            del json_data["layers"][i]
-            break  # Remove only one tree
+            del json_data["layers"][i]  # Delete the last tree layer
+            break
+    return json_data
 
 # Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data):
+def display_json_editor(json_data, initial_tree_count):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Get the number of trees
-    tree_count = count_trees(updated_json)
-    st.sidebar.info(f"Fixed Number of Trees: 35\nCurrent Trees: {tree_count}")
+    # Display the number of trees
+    tree_count = count_trees(json_data)
+    st.sidebar.info(f"Number of Trees: {tree_count}")
 
-    # Buttons to add or remove trees
-    if st.sidebar.button("Add Tree"):
-        add_tree(updated_json)
-
-    if st.sidebar.button("Remove Tree"):
-        remove_tree(updated_json)
+    # Add and Remove buttons
+    col1, col2 = st.sidebar.columns(2)
+    if col1.button("Add Tree"):
+        updated_json = add_tree(updated_json)
+    if col2.button("Remove Tree"):
+        if tree_count > initial_tree_count:  # Only remove if additional trees exist
+            updated_json = remove_tree(updated_json)
 
     # Add collective controls for all trees
     st.sidebar.subheader("All Trees Settings")
@@ -101,14 +98,14 @@ def main():
     st.title("Interactive Tree Animation Editor")
     st.markdown("Use the sidebar to adjust the tree animation parameters.")
 
-    # Clear the cache when the app starts
-    clear_cache()
-
     # Load JSON data from tree.json
     json_data = load_json()
-    
+
+    # Get the initial tree count
+    initial_tree_count = count_trees(json_data)
+
     # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(json_data)
+    modified_json = display_json_editor(json_data, initial_tree_count)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
