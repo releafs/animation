@@ -37,24 +37,29 @@ def display_json_editor(json_data):
     tree_count = count_trees(json_data)
     st.sidebar.info(f"Number of Trees: {tree_count}")
 
-    # Loop through each "tree" in the JSON "layers"
-    for index, layer in enumerate(updated_json.get("layers", [])):
-        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
-            st.sidebar.subheader(f"Tree {index + 1}")
-            
-            # Edit position (x, y)
+    # Add collective controls for all trees
+    st.sidebar.subheader("All Trees Settings")
+
+    # Control collective position offset
+    position_offset_x = st.sidebar.slider("All Trees Position Offset X", -500, 500, 0, step=10)
+    position_offset_y = st.sidebar.slider("All Trees Position Offset Y", -500, 500, 0, step=10)
+
+    # Control collective scaling factor
+    scaling_factor = st.sidebar.slider("All Trees Scale Factor", 50, 300, 100, step=10)
+
+    # Apply these collective settings to all tree layers
+    for layer in updated_json.get("layers", []):
+        if "tree" in layer.get("nm", "").lower():
+            # Update position
             position = layer["ks"]["p"]["k"]
-            new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
-            new_y = st.sidebar.slider(f"Tree {index + 1} Position Y", 0, 1200, int(position[1]), step=10)
-            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
+            layer["ks"]["p"]["k"] = [
+                position[0] + position_offset_x,  # Adjust X
+                position[1] + position_offset_y,  # Adjust Y
+                position[2],
+            ]
 
-            # Edit scale
-            scale = layer["ks"]["s"]["k"]
-            new_scale = st.sidebar.slider(f"Tree {index + 1} Scale", 50, 300, int(scale[0]), step=10)
-            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
-
-            # Update the layer in the JSON data
-            updated_json["layers"][index] = layer
+            # Update scale
+            layer["ks"]["s"]["k"] = [scaling_factor, scaling_factor, 100]
 
     return updated_json
 
