@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Builder", layout="wide")
+st.set_page_config(page_title="Tree Animation Debugger", layout="wide")
 
 # Allowed shape indices
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
@@ -39,6 +39,9 @@ def prepare_json(json_data):
             if "rows of trees" in layer.get("nm", "").lower():
                 layer["ks"]["p"]["k"] = [DEFAULT_POSITION_X, DEFAULT_POSITION_Y, 0]  # Position
                 layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]  # Scale
+            # Ensure opacity is 100
+            if "ks" in layer and "o" in layer["ks"]:
+                layer["ks"]["o"]["k"] = 100
     return filtered_data
 
 # Duplicate the animation based on the number of copies
@@ -69,8 +72,8 @@ def duplicate_animation(json_data, copies, offsets):
 
 # Main Streamlit app function
 def main():
-    st.title("Tree Animation Builder")
-    st.markdown("Duplicate and position animations like Lego blocks.")
+    st.title("Tree Animation Debugger")
+    st.markdown("Duplicate and debug animations.")
 
     # Load JSON data from tree.json
     json_data = load_json()
@@ -92,6 +95,10 @@ def main():
 
     # Duplicate animations with specified offsets
     final_animation = duplicate_animation(base_animation, copies, offsets)
+
+    # Debug output: Display JSON structure
+    st.subheader("JSON Debugging Output")
+    st.json(final_animation)  # Show JSON for debugging
 
     # Render the final animation
     st.subheader("Live Animation Preview")
