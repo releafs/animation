@@ -41,20 +41,61 @@ def prepare_json(json_data):
                 layer["ks"]["s"]["k"] = [DEFAULT_SCALE, DEFAULT_SCALE, 100]  # Scale
     return filtered_data
 
+# Duplicate the animation based on the number of copies
+def duplicate_animation(json_data, copies, offsets):
+    """
+    Duplicates the animation `copies` times and adjusts their positions based on offsets.
+    """
+    duplicated_data = {"layers": []}
+
+    for i in range(copies):
+        for layer in json_data.get("layers", []):
+            # Create a copy of the layer
+            new_layer = layer.copy()
+            
+            # Adjust position for each duplicate
+            if "ks" in new_layer and "p" in new_layer["ks"]:
+                x_offset = offsets[i]["x"]
+                y_offset = offsets[i]["y"]
+                new_layer["ks"]["p"]["k"] = [
+                    new_layer["ks"]["p"]["k"][0] + x_offset,
+                    new_layer["ks"]["p"]["k"][1] + y_offset,
+                    0
+                ]
+            
+            # Add the modified layer to the new animation
+            duplicated_data["layers"].append(new_layer)
+    return duplicated_data
+
 # Main Streamlit app function
 def main():
-    st.title("Tree Animation Preview")
-    st.markdown("This animation uses the default parameters for the tree shapes and 'rows of trees'.")
+    st.title("Tree Animation Builder")
+    st.markdown("Duplicate and position animations like Lego blocks.")
 
     # Load JSON data from tree.json
     json_data = load_json()
 
-    # Prepare the JSON by filtering tree shapes and setting default values
-    prepared_json = prepare_json(json_data)
+    # Prepare the base animation
+    base_animation = prepare_json(json_data)
 
-    # Render the prepared JSON animation
+    # Sidebar controls for duplication
+    st.sidebar.header("Animation Controls")
+    copies = st.sidebar.number_input("Number of Animations", min_value=1, max_value=10, value=1, step=1)
+
+    # Collect offsets for each duplicate
+    offsets = []
+    for i in range(copies):
+        st.sidebar.subheader(f"Animation {i + 1} Position")
+        x_offset = st.sidebar.slider(f"X Offset for Animation {i + 1}", -2000, 2000, 0, step=10)
+        y_offset = st.sidebar.slider(f"Y Offset for Animation {i + 1}", -2000, 2000, 0, step=10)
+        offsets.append({"x": x_offset, "y": y_offset})
+
+    # Duplicate animations with specified offsets
+    final_animation = duplicate_animation(base_animation, copies, offsets)
+
+    # Render the final animation
     st.subheader("Live Animation Preview")
-    st_lottie(prepared_json, key="tree_animation")
+    st_lottie(final_animation, key="tree_animation")
 
 # Run the Streamlit app
 if __name__ == "__main__":
