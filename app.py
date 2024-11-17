@@ -1,5 +1,4 @@
 import json
-import copy
 import streamlit as st
 from streamlit_lottie import st_lottie
 
@@ -12,91 +11,63 @@ def load_json():
     with open("tree.json", "r") as f:
         return json.load(f)
 
-# Count the number of trees in the animation
-def count_trees(json_data):
+# Count the number of trees and show layer breakdown
+def count_trees_with_layer_info(json_data):
     """
-    Count the number of tree objects in the animation JSON.
+    Count the number of trees in the animation JSON and identify which layer they belong to.
+    Returns:
+        - Total tree count
+        - Layer-wise breakdown
     """
-    tree_count = 0
+    total_trees = 0
+    layer_tree_counts = {}  # To store tree count per layer
+
     for layer in json_data.get("layers", []):
+        # Check if the layer is named "tree" or contains tree objects
         if "tree" in layer.get("nm", "").lower():
+            # If the layer has shapes, count the individual shapes
             if "shapes" in layer:
-                tree_count += len(layer["shapes"])
+                tree_count = len(layer["shapes"])  # Count shapes in the layer
+                layer_tree_counts[layer["nm"]] = tree_count
+                total_trees += tree_count
             else:
-                tree_count += 1
-    return tree_count
+                layer_tree_counts[layer["nm"]] = 1  # Count the layer as one tree if no shapes found
+                total_trees += 1
 
-# Add a new tree layer
-def add_tree(json_data, initial_tree_count):
-    """
-    Add a new tree by duplicating an existing tree layer.
-    """
-    # Find the first tree layer to duplicate
-    for layer in json_data["layers"]:
-        if "tree" in layer.get("nm", "").lower():
-            new_tree = copy.deepcopy(layer)  # Duplicate the first tree layer
-            new_tree["nm"] = f"tree_{initial_tree_count + 1}"  # Rename based on count
-            new_tree["ks"]["p"]["k"] = [new_tree["ks"]["p"]["k"][0] + 50,  # Offset X
-                                        new_tree["ks"]["p"]["k"][1] + 50,  # Offset Y
-                                        new_tree["ks"]["p"]["k"][2]]  # Keep Z unchanged
-            json_data["layers"].append(new_tree)  # Add the new tree to the layers
-            break
-    return json_data
-
-# Remove the last tree layer
-def remove_tree(json_data, initial_tree_count):
-    """
-    Remove the last tree layer.
-    """
-    # Iterate layers in reverse order to find the last tree layer
-    for i in range(len(json_data["layers"]) - 1, -1, -1):
-        if "tree" in json_data["layers"][i].get("nm", "").lower():
-            current_tree_count = count_trees(json_data)
-            if current_tree_count > initial_tree_count:  # Only remove if above baseline
-                del json_data["layers"][i]
-                break
-    return json_data
+    return total_trees, layer_tree_counts
 
 # Display parameters and allow editing in Streamlit sidebar
-def display_json_editor(json_data, initial_tree_count):
+def display_json_editor(json_data):
     updated_json = json_data.copy()  # Create a copy to store modifications
     st.sidebar.header("Edit Tree Animation Parameters")
 
-    # Display the number of trees
-    tree_count = count_trees(json_data)
-    st.sidebar.info(f"Number of Trees: {tree_count}")
+    # Get the total tree count and layer-wise breakdown
+    total_trees, layer_tree_counts = count_trees_with_layer_info(json_data)
+    st.sidebar.info(f"Number of Trees: {total_trees}")
 
-    # Add and Remove buttons
-    col1, col2 = st.sidebar.columns(2)
-    if col1.button("Add Tree"):
-        updated_json = add_tree(updated_json, tree_count)
-    if col2.button("Remove Tree"):
-        if tree_count > initial_tree_count:  # Only remove if above baseline
-            updated_json = remove_tree(updated_json, initial_tree_count)
+    # Show layer-wise breakdown
+    st.sidebar.subheader("Tree Count per Layer")
+    for layer_name, count in layer_tree_counts.items():
+        st.sidebar.write(f"{layer_name}: {count} trees")
 
-    # Add collective controls for all trees
-    st.sidebar.subheader("All Trees Settings")
-
-    # Control collective position offset
-    position_offset_x = st.sidebar.slider("All Trees Position Offset X", -500, 500, 0, step=10)
-    position_offset_y = st.sidebar.slider("All Trees Position Offset Y", -500, 500, 0, step=10)
-
-    # Control collective scaling factor
-    scaling_factor = st.sidebar.slider("All Trees Scale Factor", 50, 300, 100, step=10)
-
-    # Apply these collective settings to all tree layers
-    for layer in updated_json.get("layers", []):
-        if "tree" in layer.get("nm", "").lower():
-            # Update position
+    # Loop through each "tree" in the JSON "layers"
+    for index, layer in enumerate(updated_json.get("layers", [])):
+        if "tree" in layer.get("nm", ""):  # Check if layer is a tree layer
+            st.sidebar.subheader(f"Tree {index + 1}")
+            
+            # Edit position (x, y)
             position = layer["ks"]["p"]["k"]
-            layer["ks"]["p"]["k"] = [
-                position[0] + position_offset_x,  # Adjust X
-                position[1] + position_offset_y,  # Adjust Y
-                position[2],
-            ]
+            new_x = st.sidebar.slider(f"Tree {index + 1} Position X", 0, 1600, int(position[0]), step=10)
+            new_y = st.sidebar.slider(f"Tree {index + 1} Position Y", 0, 1200, int(position[1]), step=10)
+            layer["ks"]["p"]["k"] = [new_x, new_y, position[2]]
 
-            # Update scale
-            layer["ks"]["s"]["k"] = [scaling_factor, scaling_factor, 100]
+            # Edit scale
+            scale = layer["ks"]["s"]["k"]
+            new_scale = st.sidebar.slider(f"Tree {index + 1} Scale", 50, 300, int(scale[0]), step=10)
+            layer["ks"]["s"]["k"] = [new_scale, new_scale, 100]
+
+            # Update the layer in the JSON data
+            updated_json["layers"][index] = layer
 
     return updated_json
 
@@ -107,12 +78,9 @@ def main():
 
     # Load JSON data from tree.json
     json_data = load_json()
-
-    # Get the initial tree count
-    initial_tree_count = count_trees(json_data)
-
+    
     # Display editable parameters in sidebar and apply changes
-    modified_json = display_json_editor(json_data, initial_tree_count)
+    modified_json = display_json_editor(json_data)
 
     # Render the modified JSON animation
     st.subheader("Live Animation Preview")
