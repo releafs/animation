@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 
 # Configure Streamlit page
-st.set_page_config(page_title="Tree Animation Editor", layout="wide")
+st.set_page_config(page_title="Tree Animation Builder", layout="wide")
 
 # Allowed shape indices
 ALLOWED_SHAPES = [7, 9, 10, 11, 14, 15, 17, 19, 20, 21, 22, 25]
@@ -86,8 +86,8 @@ def main():
     offsets = []
     for i in range(copies):
         st.sidebar.subheader(f"Animation {i + 1} Position")
-        x_offset = st.sidebar.slider(f"X Offset for Animation {i + 1}", -2000, 2000, 0, step=10)
-        y_offset = st.sidebar.slider(f"Y Offset for Animation {i + 1}", -2000, 2000, 0, step=10)
+        x_offset = st.sidebar.slider(f"X Offset for Animation {i + 1}", -2000, 2000, i * 500, step=10)
+        y_offset = st.sidebar.slider(f"Y Offset for Animation {i + 1}", -2000, 2000, i * 500, step=10)
         offsets.append({"x": x_offset, "y": y_offset})
 
     # Duplicate animations with specified offsets
